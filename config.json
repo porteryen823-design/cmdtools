@@ -1,0 +1,7 @@
+{
+  "DBServer": "127.0.0.1",
+  "DBPort": "3306",
+  "DBUser": "root",
+  "DBPassword": "gsi5613686#",
+  "DataBase": "MyCmdTools"
+}
