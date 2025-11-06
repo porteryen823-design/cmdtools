@@ -196,7 +196,7 @@ CREATE TABLE IF NOT EXISTS `PromptTools` (
 
 ---
 
-**開發者**：Roo  
+**開發者**：Roo  /Porter
 **完成時間**：2025-11-06  
 **版本**：v1.0.0  
 **狀態**：✅ 完全完成

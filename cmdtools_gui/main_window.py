@@ -12,9 +12,9 @@ from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QTabWidget, QLineEdit, QPushButton, QLabel,
     QMessageBox, QStatusBar, QProgressBar, QDialog,
-    QApplication, QFrame, QSplitter
+    QApplication, QFrame, QSplitter, QSystemTrayIcon, QMenu
 )
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QEvent
 from PyQt5.QtGui import QIcon, QFont
 
 from .database import DatabaseManager
@@ -36,8 +36,63 @@ class MainWindow(QMainWindow):
         # 初始化日誌記錄器
         self.init_logger()
         
+        # 初始化托盤圖標
+        self.init_tray_icon()
+        
         self.init_ui()
         self.init_database()
+    
+    def init_tray_icon(self):
+        """初始化托盤圖標"""
+        # 創建托盤圖標
+        self.tray_icon = QSystemTrayIcon(self)
+        
+        # 嘗試設置圖標，如果圖標文件不存在則使用默認圖標
+        icon_path = os.path.join(os.getcwd(), "cmdtools_icon.ico")
+        if os.path.exists(icon_path):
+            self.tray_icon.setIcon(QIcon(icon_path))
+        else:
+            # 使用默認圖標（如果找不到自定義圖標）
+            self.tray_icon.setIcon(self.style().standardIcon(self.style().SP_ComputerIcon))
+        
+        # 設置托盤圖標可見
+        self.tray_icon.setVisible(True)
+        
+        # 創建托盤右鍵菜單
+        self.create_tray_menu()
+        
+        # 連接托盤圖標點擊事件（雙擊可還原窗口）
+        self.tray_icon.activated.connect(self.on_tray_icon_activated)
+    
+    def create_tray_menu(self):
+        """創建托盤菜單"""
+        menu = QMenu()
+        
+        # 還原視窗動作
+        restore_action = menu.addAction("還原視窗")
+        restore_action.triggered.connect(self.showNormal)
+        
+        # 退出動作
+        exit_action = menu.addAction("退出")
+        exit_action.triggered.connect(self.close)
+        
+        # 設置托盤圖標的右鍵菜單
+        self.tray_icon.setContextMenu(menu)
+    
+    def on_tray_icon_activated(self, reason):
+        """處理托盤圖標點擊事件"""
+        if reason == QSystemTrayIcon.DoubleClick:
+            # 雙擊托盤圖標還原視窗
+            self.showNormal()
+            self.activateWindow()
+    
+    def changeEvent(self, event):
+        """處理窗口狀態變化"""
+        if event.type() == QEvent.WindowStateChange:
+            if self.windowState() == Qt.WindowMinimized:
+                # 窗口最小化時隱藏到托盤
+                self.hide()
+        super().changeEvent(event)
     
     def init_logger(self):
         """初始化日誌記錄器"""

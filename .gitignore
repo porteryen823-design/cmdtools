@@ -1,0 +1,17 @@
+# 忽略 logs 目录
+logs/
+
+# 忽略 Python 编译文件
+*.pyc
+*.pyo
+*.pyd
+
+# 忽略 IDE 配置文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 忽略操作系统文件
+.DS_Store
+Thumbs.db
