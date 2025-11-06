@@ -6,10 +6,11 @@
 
 import os
 import sys
+import logging
 from datetime import datetime
 from PyQt5.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-    QTabWidget, QLineEdit, QPushButton, QLabel, 
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QTabWidget, QLineEdit, QPushButton, QLabel,
     QMessageBox, QStatusBar, QProgressBar, QDialog,
     QApplication, QFrame, QSplitter
 )
@@ -31,8 +32,51 @@ class MainWindow(QMainWindow):
         self.search_timer.setSingleShot(True)
         self.search_timer.timeout.connect(self._do_global_search)
         self.current_search_text = ""
+        
+        # 初始化日誌記錄器
+        self.init_logger()
+        
         self.init_ui()
         self.init_database()
+    
+    def init_logger(self):
+        """初始化日誌記錄器"""
+        # 創建日誌目錄（如果不存在）
+        log_dir = os.path.join(os.getcwd(), "logs")
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        
+        # 設置日誌文件名（使用當前日期）
+        log_file = os.path.join(log_dir, f"app_log_{datetime.now().strftime('%Y%m%d')}.log")
+        
+        # 配置日誌記錄器
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_file, encoding='utf-8'),
+                logging.StreamHandler()  # 同時輸出到控制台
+            ]
+        )
+        
+        # 創建自定義的日誌記錄器
+        self.logger = logging.getLogger('CmdTools')
+    
+    def log_operation(self, operation, table_type, seq_no=None, data=None):
+        """記錄操作日誌"""
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        log_message = f"[{timestamp}] {operation} {table_type}"
+        
+        if seq_no is not None:
+            log_message += f" (SeqNo: {seq_no})"
+        
+        if data:
+            # 對於敏感數據（如密碼），不記錄實際值
+            safe_data = {k: v if k.lower() != 'password' and k.lower() != 'pwd' else '***'
+                         for k, v in data.items()}
+            log_message += f" - Data: {safe_data}"
+        
+        self.logger.info(log_message)
     
     def init_ui(self):
         """初始化使用者介面"""
@@ -384,6 +428,8 @@ class MainWindow(QMainWindow):
         dialog = EditRecordDialog(parent=self, table_type=current_tab, is_edit=False)
         if dialog.exec_() == QDialog.Accepted:
             data = dialog.get_data()
+            # 記錄日誌
+            self.log_operation("新增", current_tab, data=data)
             self.execute_add_record(current_tab, data)
     
     def on_edit_record(self):
@@ -397,6 +443,8 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "警告", "請先選擇要編輯的記錄")
             return
         
+        # 記錄日誌
+        self.log_operation("編輯", current_tab, seq_no=record.get('iSeqNo'))
         self.open_edit_dialog(current_tab, record)
     
     def open_edit_dialog(self, table_type, record):
@@ -423,10 +471,13 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "警告", "請先選擇要刪除的記錄")
             return
         
+        # 記錄日誌
+        self.log_operation("刪除", current_tab, seq_no=record.get('iSeqNo'), data=record)
+        
         # 確認刪除
         confirm_dialog = ConfirmDialog(
-            self, 
-            "確認刪除", 
+            self,
+            "確認刪除",
             f"確定要刪除序號 {record.get('iSeqNo')} 的記錄嗎？"
         )
         
