@@ -19,8 +19,20 @@ except ImportError as e:
     print("pip install -r requirements.txt")
     sys.exit(1)
 
+import subprocess
+
 if __name__ == "__main__":
     try:
+        # 假設你要呼叫 C:\Tools\mytool.exe，並傳入兩個參數
+        #exe_path = r"C:\VSCode_Proj\myTools\web_login_tool\dist\web_login.exe"
+        #args = ["-u", "http://localhost:18083", "-username","admin", "-password","gsi5613686#"]
+
+        # 執行並等待完成
+        #result = subprocess.run([exe_path] + args, capture_output=True, text=True)
+
+        #print("標準輸出:", result.stdout)
+        #print("錯誤輸出:", result.stderr)
+
         main()
     except KeyboardInterrupt:
         print("\n程式被使用者中斷")

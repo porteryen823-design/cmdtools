@@ -135,7 +135,7 @@ class MainWindow(QMainWindow):
     
     def init_ui(self):
         """初始化使用者介面"""
-        self.setWindowTitle("資料庫工具程式 - 命令工具和提示工具管理系統")
+        self.setWindowTitle("我的工具程式 - 命令工具和提示工具管理系統 --給老人家 & 記憶力衰退使用")
         self.setGeometry(100, 100, 1200, 800)
         
         # 設定字體
@@ -213,6 +213,16 @@ class MainWindow(QMainWindow):
         self.prompt_tab = TableTabWidget(table_type="prompt")
         self.prompt_tab.set_data_callback(self.on_data_operation)
         self.tab_widget.addTab(self.prompt_tab, "提示工具")
+        
+        # 創建 Windows 程式分頁
+        self.win_program_tab = TableTabWidget(table_type="winprogram")
+        self.win_program_tab.set_data_callback(self.on_data_operation)
+        self.tab_widget.addTab(self.win_program_tab, "Windows 程式")
+        
+        # 創建網站分頁
+        self.web_site_tab = TableTabWidget(table_type="website")
+        self.web_site_tab.set_data_callback(self.on_data_operation)
+        self.tab_widget.addTab(self.web_site_tab, "網站管理")
         
         # 連接分頁切換事件
         self.tab_widget.currentChanged.connect(self.on_tab_changed)
@@ -417,6 +427,8 @@ class MainWindow(QMainWindow):
                 # 設定資料到表格
                 self.cmd_tab.set_data(self.db_manager.cmd_tools_data)
                 self.prompt_tab.set_data(self.db_manager.prompt_tools_data)
+                self.win_program_tab.set_data(self.db_manager.win_program_data)
+                self.web_site_tab.set_data(self.db_manager.web_site_data)
                 
                 self.update_status("資料載入完成")
                 self.update_data_status()
@@ -445,6 +457,10 @@ class MainWindow(QMainWindow):
             self.cmd_tab.apply_global_filter(keyword)
         if self.prompt_tab:
             self.prompt_tab.apply_global_filter(keyword)
+        if self.win_program_tab:
+            self.win_program_tab.apply_global_filter(keyword)
+        if self.web_site_tab:
+            self.web_site_tab.apply_global_filter(keyword)
         
         self.update_data_status()
     
@@ -463,6 +479,10 @@ class MainWindow(QMainWindow):
             self.cmd_tab.clear_all_filters()
         if self.prompt_tab:
             self.prompt_tab.clear_all_filters()
+        if self.win_program_tab:
+            self.win_program_tab.clear_all_filters()
+        if self.web_site_tab:
+            self.web_site_tab.clear_all_filters()
     
     def on_tab_changed(self, index):
         """分頁切換事件"""
@@ -568,8 +588,14 @@ class MainWindow(QMainWindow):
         try:
             if table_type == 'cmd':
                 success, message = self.db_manager.add_cmd_tool(data)
-            else:
+            elif table_type == 'prompt':
                 success, message = self.db_manager.add_prompt_tool(data)
+            elif table_type == 'winprogram':
+                success, message = self.db_manager.add_win_program(data)
+            elif table_type == 'website':
+                success, message = self.db_manager.add_web_site(data)
+            else:
+                success, message = False, f"不支援的表格類型: {table_type}"
             
             if success:
                 self.update_tab_data(table_type)
@@ -588,8 +614,14 @@ class MainWindow(QMainWindow):
         try:
             if table_type == 'cmd':
                 success, message = self.db_manager.update_cmd_tool(seq_no, data)
-            else:
+            elif table_type == 'prompt':
                 success, message = self.db_manager.update_prompt_tool(seq_no, data)
+            elif table_type == 'winprogram':
+                success, message = self.db_manager.update_win_program(seq_no, data)
+            elif table_type == 'website':
+                success, message = self.db_manager.update_web_site(seq_no, data)
+            else:
+                success, message = False, f"不支援的表格類型: {table_type}"
             
             if success:
                 self.update_tab_data(table_type)
@@ -608,8 +640,14 @@ class MainWindow(QMainWindow):
         try:
             if table_type == 'cmd':
                 success, message = self.db_manager.delete_cmd_tool(seq_no)
-            else:
+            elif table_type == 'prompt':
                 success, message = self.db_manager.delete_prompt_tool(seq_no)
+            elif table_type == 'winprogram':
+                success, message = self.db_manager.delete_win_program(seq_no)
+            elif table_type == 'website':
+                success, message = self.db_manager.delete_web_site(seq_no)
+            else:
+                success, message = False, f"不支援的表格類型: {table_type}"
             
             if success:
                 self.update_tab_data(table_type)
@@ -630,18 +668,34 @@ class MainWindow(QMainWindow):
                 # 獲取篩選後資料
                 if settings['export_filtered']:
                     data = self.cmd_tab.table_widget.filtered_data
-            else:
+            elif table_type == 'prompt':
                 data = self.db_manager.prompt_tools_data
                 total_count = len(data)
                 filtered_count = self.prompt_tab.get_record_count_info()['current']
                 # 獲取篩選後資料
                 if settings['export_filtered']:
                     data = self.prompt_tab.table_widget.filtered_data
+            elif table_type == 'winprogram':
+                data = self.db_manager.win_program_data
+                total_count = len(data)
+                filtered_count = self.win_program_tab.get_record_count_info()['current']
+                if settings['export_filtered']:
+                    data = self.win_program_tab.table_widget.filtered_data
+            elif table_type == 'website':
+                data = self.db_manager.web_site_data
+                total_count = len(data)
+                filtered_count = self.web_site_tab.get_record_count_info()['current']
+                if settings['export_filtered']:
+                    data = self.web_site_tab.table_widget.filtered_data
+            else:
+                data = []
+                total_count = 0
+                filtered_count = 0
             
             # 產生 JSON
             json_data = self.db_manager.export_to_json(
-                data, 
-                f"{'CmdTools' if table_type == 'cmd' else 'PromptTools'}",
+                data,
+                table_type.capitalize(),
                 total_count,
                 filtered_count
             )
@@ -651,8 +705,8 @@ class MainWindow(QMainWindow):
                 f.write(json_data)
             
             QMessageBox.information(
-                self, 
-                "匯出成功", 
+                self,
+                "匯出成功",
                 f"資料已成功匯出至:\n{settings['file_path']}"
             )
             
@@ -663,8 +717,12 @@ class MainWindow(QMainWindow):
         """更新分頁資料"""
         if table_type == 'cmd':
             self.cmd_tab.set_data(self.db_manager.cmd_tools_data)
-        else:
+        elif table_type == 'prompt':
             self.prompt_tab.set_data(self.db_manager.prompt_tools_data)
+        elif table_type == 'winprogram':
+            self.win_program_tab.set_data(self.db_manager.win_program_data)
+        elif table_type == 'website':
+            self.web_site_tab.set_data(self.db_manager.web_site_data)
         
         self.update_data_status()
     
@@ -675,6 +733,10 @@ class MainWindow(QMainWindow):
             return 'cmd'
         elif current_index == 1:
             return 'prompt'
+        elif current_index == 2:
+            return 'winprogram'
+        elif current_index == 3:
+            return 'website'
         return None
     
     def get_current_tab_record(self):
@@ -684,6 +746,10 @@ class MainWindow(QMainWindow):
             return self.cmd_tab.get_current_record()
         elif current_tab == 'prompt':
             return self.prompt_tab.get_current_record()
+        elif current_tab == 'winprogram':
+            return self.win_program_tab.get_current_record()
+        elif current_tab == 'website':
+            return self.web_site_tab.get_current_record()
         return {}
     
     def update_connection_status(self, message, connected):
@@ -699,10 +765,14 @@ class MainWindow(QMainWindow):
         """更新資料統計"""
         cmd_info = self.cmd_tab.get_record_count_info() if self.cmd_tab else {'current': 0, 'total': 0}
         prompt_info = self.prompt_tab.get_record_count_info() if self.prompt_tab else {'current': 0, 'total': 0}
+        win_program_info = self.win_program_tab.get_record_count_info() if self.win_program_tab else {'current': 0, 'total': 0}
+        web_site_info = self.web_site_tab.get_record_count_info() if self.web_site_tab else {'current': 0, 'total': 0}
         
         self.data_label.setText(
             f"命令工具: {cmd_info['current']}/{cmd_info['total']} | "
-            f"提示工具: {prompt_info['current']}/{prompt_info['total']}"
+            f"提示工具: {prompt_info['current']}/{prompt_info['total']} | "
+            f"Windows 程式: {win_program_info['current']}/{win_program_info['total']} | "
+            f"網站管理: {web_site_info['current']}/{web_site_info['total']}"
         )
     
     def update_status(self, message):
@@ -718,8 +788,8 @@ class MainWindow(QMainWindow):
 def main():
     """主程式入口"""
     app = QApplication(sys.argv)
-    app.setApplicationName("資料庫工具程式")
-    app.setApplicationVersion("1.0.0")
+    app.setApplicationName("我的工具程式")
+    app.setApplicationVersion("1.0.1")
     
     # 設定應用程式圖示（如果有的話）
     # app.setWindowIcon(QIcon("icon.png"))

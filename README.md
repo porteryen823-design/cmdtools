@@ -2,12 +2,12 @@
 
 ## 專案概述
 
-這是一個使用 Python + PyQt5 + MySQL 開發的資料庫工具程式，主要用於管理和查詢命令工具和提示工具兩張資料表。程式提供直觀的圖形界面，支援資料的檢視、篩選、編輯和匯出功能。
+這是一個使用 Python + PyQt5 + MySQL 開發的資料庫工具程式，主要用於管理和查詢命令工具、提示工具、Windows 程式和網站管理四張資料表。程式提供直觀的圖形界面，支援資料的檢視、篩選、編輯和匯出功能。
 
 ## 功能特色
 
 ### 📊 資料管理
-- **雙資料表支援**: CmdTools（命令工具）和 PromptTools（提示工具）
+- **四資料表支援**: CmdTools（命令工具）、PromptTools（提示工具）、WinProgram（Windows 程式）和 WebSite（網站管理）
 - **分頁界面**: 使用 Tab 切換不同資料表
 - **即時載入**: 程式啟動時自動載入所有資料到記憶體
 - **本地篩選**: 篩選操作在本地執行，響應快速
@@ -80,7 +80,7 @@ pip install PyQt5 mysql-connector-python
 ```
 
 ### 4. 確保資料表存在
-確保您的 MySQL 資料庫中存在以下兩張資料表：
+確保您的 MySQL 資料庫中存在以下四張資料表：
 
 #### CmdTools 資料表
 ```sql
@@ -106,6 +106,30 @@ CREATE TABLE IF NOT EXISTS `PromptTools` (
 ) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 ```
 
+#### WinProgram 資料表
+```sql
+CREATE TABLE IF NOT EXISTS `WinProgram` (
+  `iSeqNo` INT(11) NOT NULL AUTO_INCREMENT,
+  `remark1` VARCHAR(150) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
+  `ProgramPathAndName` VARCHAR(150) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
+  `ClickEndRun` INT(11) NULL DEFAULT NULL,
+  PRIMARY KEY (`iSeqNo`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+```
+
+#### WebSite 資料表
+```sql
+CREATE TABLE IF NOT EXISTS `WebSite` (
+  `iSeqNo` INT(11) NOT NULL AUTO_INCREMENT,
+  `Remark` VARCHAR(250) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
+  `Classification` VARCHAR(250) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
+  `Website` VARCHAR(250) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
+  `account` VARCHAR(250) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
+  `password` VARCHAR(250) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
+  PRIMARY KEY (`iSeqNo`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+```
+
 ## 使用指南
 
 ### 啟動程式
@@ -117,13 +141,15 @@ python main.py
 
 #### 1. 全域搜尋
 - 在頂部的搜尋框輸入關鍵字
-- 程式會即時搜尋兩個表格的所有欄位
+- 程式會即時搜尋所有表格的所有欄位
 - 點擊「搜尋」按鈕手動觸發搜尋
 - 點擊「清除」按鈕清除搜尋條件
 
 #### 2. 分頁切換
 - 點擊「命令工具」分頁查看 CmdTools 資料
 - 點擊「提示工具」分頁查看 PromptTools 資料
+- 點擊「Windows 程式」分頁查看 WinProgram 資料
+- 點擊「網站管理」分頁查看 WebSite 資料
 
 #### 3. 單一欄位搜尋
 在每個分頁中：
@@ -147,6 +173,26 @@ python main.py
 - **刷新資料**: 點擊「刷新資料」按鈕重新從資料庫載入資料
 - **更新資料庫**: 點擊「更新資料庫」按鈕確保資料庫同步
 
+#### 7. Windows 程式分頁功能
+- **執行按鈕**: 當「點擊後執行」屬性設為「是」（值為 1）時，顯示執行按鈕
+- **按鈕行為**:
+  - 根據選中的記錄動態啟用/禁用
+  - 顯示程式名稱：「執行程式: [程式名稱]」
+  - 支援跨平台執行（Windows、Linux、Mac）
+  - 自動檢查程式檔案存在性
+  - 嘗試不同副檔名 (.exe, .bat, .cmd)
+  - 在系統 PATH 中搜索程式
+- **狀態指示**：提供即時狀態訊息和視覺反饋
+
+#### 8. 網站管理分頁功能
+- **開啟網站按鈕**: 為網站管理分頁添加直接開啟網站的功能
+- **按鈕行為**:
+  - 根據選中的記錄動態啟用/禁用
+  - 顯示網站域名：「開啟網站: [網站域名]」
+  - 自動添加 https:// 協議（如果缺失）
+  - 使用系統默認瀏覽器開啟網站
+- **狀態指示**：提供即時狀態訊息和視覺反饋
+
 ## 資料格式說明
 
 ### CmdTools 資料表欄位
@@ -162,6 +208,20 @@ python main.py
 - **Prompt**: 提示內容（中文）
 - **Prompt_Eng**: 提示內容（英文）
 - **Classification**: 分類標籤
+
+### WinProgram 資料表欄位
+- **iSeqNo**: 序號（自動產生）
+- **remark1**: 備註1
+- **ProgramPathAndName**: 程式路徑與名稱
+- **ClickEndRun**: 點擊後執行（0:否，1:是）
+
+### WebSite 資料表欄位
+- **iSeqNo**: 序號（自動產生）
+- **Remark**: 備註
+- **Classification**: 分類
+- **Website**: 網站網址
+- **account**: 帳號
+- **password**: 密碼
 
 ### 匯出 JSON 格式
 ```json
@@ -220,12 +280,28 @@ pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple/
 - 確認資料表中的資料格式正確
 - 重新載入資料（點擊刷新按鈕）
 
+#### 5. 程式執行功能異常
+**問題**: 執行程式時發生錯誤
+**解決方案**:
+- 確認程式路徑正確
+- 檢查程式檔案是否存在
+- 確認程式具有執行權限
+
+#### 6. 網站開啟功能異常
+**問題**: 開啟網站時發生錯誤
+**解決方案**:
+- 確認網站網址正確
+- 檢查網路連線
+- 確認系統默認瀏覽器設置正確
+
 ### 錯誤代碼說明
 
 - **連線失敗**: 資料庫連線設定錯誤或服務不可用
 - **載入錯誤**: 資料庫讀取失敗或資料表不存在
 - **操作失敗**: 資料操作（新增/編輯/刪除）執行失敗
 - **匯出失敗**: 檔案權限不足或磁碟空間不足
+- **執行失敗**: 程式執行時發生錯誤
+- **網站開啟失敗**: 網站開啟時發生錯誤
 
 ## 開發資訊
 
@@ -253,7 +329,6 @@ requirements.txt       # 依賴套件清單
 如有問題或建議，請聯絡開發者或提交 Issue。
 
 ---
-
 **版本**: 1.0.0  
-**最後更新**: 2025-11-06  
+**最後更新**: 2025-11-07
 **開發者**: Roo

@@ -6,11 +6,17 @@
 
 from PyQt5.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QWidget,
-    QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, 
+    QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton,
     QLabel, QGroupBox, QMessageBox
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 from typing import List, Dict, Callable
+import subprocess
+import os
+import platform
+import webbrowser
+import urllib.parse
+import time
 
 
 class FilterWidget(QWidget):
@@ -140,9 +146,18 @@ class DataTableWidget(QTableWidget):
         if self.table_type == 'cmd':
             self.setColumnCount(6)
             headers = ["序號", "命令", "範例", "備註1", "備註2", "類型"]
-        else:
+        elif self.table_type == 'prompt':
             self.setColumnCount(4)
             headers = ["序號", "提示", "提示英文", "分類"]
+        elif self.table_type == 'winprogram':
+            self.setColumnCount(4)
+            headers = ["序號", "備註1", "程式路徑", "點擊結束執行"]
+        elif self.table_type == 'website':
+            self.setColumnCount(8)
+            headers = ["序號", "備註", "分類", "網站", "帳號", "帳號ID", "密碼", "密碼ID"]
+        else:
+            self.setColumnCount(1)
+            headers = ["序號"]
         
         self.setHorizontalHeaderLabels(headers)
         
@@ -195,12 +210,28 @@ class DataTableWidget(QTableWidget):
                 self.setItem(row, 3, QTableWidgetItem(str(record.get('remark1', ''))))
                 self.setItem(row, 4, QTableWidgetItem(str(record.get('remark2', ''))))
                 self.setItem(row, 5, QTableWidgetItem(str(record.get('Type', ''))))
-            else:
+            elif self.table_type == 'prompt':
                 # PromptTools 表格
                 self.setItem(row, 0, QTableWidgetItem(str(record.get('iSeqNo', ''))))
                 self.setItem(row, 1, QTableWidgetItem(str(record.get('Prompt', ''))))
                 self.setItem(row, 2, QTableWidgetItem(str(record.get('Prompt_Eng', ''))))
                 self.setItem(row, 3, QTableWidgetItem(str(record.get('Classification', ''))))
+            elif self.table_type == 'winprogram':
+                # WinProgram 表格
+                self.setItem(row, 0, QTableWidgetItem(str(record.get('iSeqNo', ''))))
+                self.setItem(row, 1, QTableWidgetItem(str(record.get('remark1', ''))))
+                self.setItem(row, 2, QTableWidgetItem(str(record.get('ProgramPathAndName', ''))))
+                self.setItem(row, 3, QTableWidgetItem(str(record.get('ClickEndRun', ''))))
+            elif self.table_type == 'website':
+                # WebSite 表格
+                self.setItem(row, 0, QTableWidgetItem(str(record.get('iSeqNo', ''))))
+                self.setItem(row, 1, QTableWidgetItem(str(record.get('Remark', ''))))
+                self.setItem(row, 2, QTableWidgetItem(str(record.get('Classification', ''))))
+                self.setItem(row, 3, QTableWidgetItem(str(record.get('Website', ''))))
+                self.setItem(row, 4, QTableWidgetItem(str(record.get('account', ''))))
+                self.setItem(row, 5, QTableWidgetItem(str(record.get('account_webid', ''))))
+                self.setItem(row, 6, QTableWidgetItem(str(record.get('password', ''))))
+                self.setItem(row, 7, QTableWidgetItem(str(record.get('password_webid', ''))))
         
         # 更新表格標題
         self.update_table_title()
@@ -248,13 +279,21 @@ class DataTableWidget(QTableWidget):
             if self.table_type == 'cmd':
                 # CmdTools 全域搜尋：搜尋所有欄位
                 searchable_fields = ['cmd', 'example', 'remark1', 'remark2', 'Type']
-            else:
+            elif self.table_type == 'prompt':
                 # PromptTools 全域搜尋：搜尋所有欄位
                 searchable_fields = ['Prompt', 'Prompt_Eng', 'Classification']
+            elif self.table_type == 'winprogram':
+                # WinProgram 全域搜尋：搜尋所有欄位
+                searchable_fields = ['remark1', 'ProgramPathAndName', 'ClickEndRun']
+            elif self.table_type == 'website':
+                # WebSite 全域搜尋：搜尋所有欄位
+                searchable_fields = ['Remark', 'Classification', 'Website', 'account', 'account_webid', 'password', 'password_webid']
+            else:
+                searchable_fields = []
             
             self.filtered_data = [
                 record for record in self.original_data
-                if any(keyword_lower in str(record.get(field, "")).lower() 
+                if any(keyword_lower in str(record.get(field, "")).lower()
                       for field in searchable_fields)
             ]
         
@@ -316,10 +355,21 @@ class TableTabWidget(QWidget):
             # 命令工具篩選控制項
             cmd_fields = ['cmd', 'example', 'remark1', 'remark2', 'Type']
             self.filter_widget = FilterWidget(fields=cmd_fields)
-        else:
+        elif self.table_type == 'prompt':
             # 提示工具篩選控制項
             prompt_fields = ['Prompt', 'Prompt_Eng', 'Classification']
             self.filter_widget = FilterWidget(fields=prompt_fields)
+        elif self.table_type == 'winprogram':
+            # Windows 程式篩選控制項
+            winprogram_fields = ['remark1', 'ProgramPathAndName', 'ClickEndRun']
+            self.filter_widget = FilterWidget(fields=winprogram_fields)
+        elif self.table_type == 'website':
+            # 網站篩選控制項
+            website_fields = ['Remark', 'Classification', 'Website', 'account', 'account_webid', 'password', 'password_webid']
+            self.filter_widget = FilterWidget(fields=website_fields)
+        else:
+            # 預設篩選控制項
+            self.filter_widget = FilterWidget(fields=[])
         
         filter_layout.addWidget(self.filter_widget)
         filter_group.setLayout(filter_layout)
@@ -329,6 +379,12 @@ class TableTabWidget(QWidget):
         self.table_widget = DataTableWidget(table_type=self.table_type)
         layout.addWidget(self.table_widget)
         
+        # 根據表格類型添加相應的按鈕
+        if self.table_type == 'winprogram':
+            self.create_execute_button(layout)
+        elif self.table_type == 'website':
+            self.create_open_website_button(layout)
+        
         self.setLayout(layout)
         
         # 更新標題
@@ -337,12 +393,302 @@ class TableTabWidget(QWidget):
         # 設置搜尋回調
         self.filter_widget.set_search_callback(self.on_field_search)
     
+    def create_execute_button(self, layout):
+        """創建執行按鈕（僅限 Windows 程式分頁）"""
+        button_layout = QHBoxLayout()
+        
+        self.execute_btn = QPushButton("執行選中程式")
+        self.execute_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #FF9800; color: white; padding: 8px 16px;
+                border: none; border-radius: 4px; font-weight: bold;
+            }
+            QPushButton:hover { background-color: #F57C00; }
+            QPushButton:pressed { background-color: #E65100; }
+            QPushButton:disabled {
+                background-color: #cccccc; color: #666666;
+            }
+        """)
+        self.execute_btn.clicked.connect(self.on_execute_program)
+        self.execute_btn.setEnabled(False)  # 預設禁用，等待選擇記錄
+        
+        self.program_status_label = QLabel("請先選擇一個程式")
+        self.program_status_label.setStyleSheet("color: #666666; font-style: italic;")
+        
+        button_layout.addWidget(self.execute_btn)
+        button_layout.addWidget(self.program_status_label)
+        button_layout.addStretch()
+        
+        layout.addLayout(button_layout)
+        
+        # 連接表格選擇變化事件
+        self.table_widget.selection_changed.connect(self.on_selection_changed)
+    
+    def on_selection_changed(self):
+        """處理選擇變化事件（僅限 Windows 程式分頁）"""
+        if self.table_type != 'winprogram':
+            return
+            
+        record = self.get_current_record()
+        if record:
+            program_path = record.get('ProgramPathAndName', '').strip()
+            click_end_run = record.get('ClickEndRun', 0)
+            
+            if program_path and click_end_run == 1:
+                self.execute_btn.setEnabled(True)
+                self.execute_btn.setText(f"執行程式: {os.path.basename(program_path) if program_path else '未知'}")
+                self.program_status_label.setText("程式可以執行")
+                self.program_status_label.setStyleSheet("color: green; font-style: normal;")
+            else:
+                self.execute_btn.setEnabled(False)
+                self.execute_btn.setText("執行選中程式")
+                if not program_path:
+                    self.program_status_label.setText("程式路徑為空")
+                else:
+                    self.program_status_label.setText("此程式設定為不自動執行")
+                self.program_status_label.setStyleSheet("color: #666666; font-style: italic;")
+        else:
+            self.execute_btn.setEnabled(False)
+            self.execute_btn.setText("執行選中程式")
+            self.program_status_label.setText("請先選擇一個程式")
+            self.program_status_label.setStyleSheet("color: #666666; font-style: italic;")
+    
+    def on_execute_program(self):
+        """執行選中的程式"""
+        if self.table_type != 'winprogram':
+            return
+            
+        record = self.get_current_record()
+        if not record:
+            return
+            
+        program_path = record.get('ProgramPathAndName', '').strip()
+        click_end_run = record.get('ClickEndRun', 0)
+        
+        if not program_path:
+            QMessageBox.warning(self, "警告", "程式路徑為空，無法執行")
+            return
+            
+        if click_end_run != 1:
+            QMessageBox.warning(self, "警告", "此程式設定為不自動執行")
+            return
+        
+        try:
+            # 檢查程式檔案是否存在
+            if not os.path.exists(program_path):
+                # 嘗試在 PATH 環境變數中尋找
+                program_name = os.path.basename(program_path)
+                if platform.system() == "Windows":
+                    # Windows 系統，嘗試不同的副檔名
+                    possible_paths = [
+                        program_path,
+                        program_path + ".exe",
+                        program_path + ".bat",
+                        program_path + ".cmd"
+                    ]
+                    found_path = None
+                    for path in possible_paths:
+                        if os.path.exists(path):
+                            found_path = path
+                            break
+                    
+                    if not found_path:
+                        # 嘗試在系統 PATH 中尋找
+                        import shutil
+                        found_path = shutil.which(program_name)
+                        if not found_path:
+                            QMessageBox.warning(self, "錯誤", f"找不到程式檔案: {program_path}")
+                            return
+                    program_path = found_path
+                else:
+                    # 非 Windows 系統，直接檢查
+                    QMessageBox.warning(self, "錯誤", f"找不到程式檔案: {program_path}")
+                    return
+            
+            # 執行程式
+            if platform.system() == "Windows":
+                # Windows 系統
+                subprocess.Popen([program_path], shell=True)
+            else:
+                # Linux/Mac 系統
+                subprocess.Popen([program_path])
+            
+            # 顯示成功訊息
+            program_name = os.path.basename(program_path)
+            QMessageBox.information(self, "成功", f"已啟動程式: {program_name}")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "錯誤", f"執行程式時發生錯誤: {str(e)}")
+    
+    def create_open_website_button(self, layout):
+        """創建開啟網站按鈕（僅限網站管理分頁）"""
+        button_layout = QHBoxLayout()
+        
+        self.open_website_btn = QPushButton("開啟網站")
+        self.open_website_btn.setStyleSheet("""
+            QPushButton { 
+                background-color: #2196F3; color: white; padding: 8px 16px; 
+                border: none; border-radius: 4px; font-weight: bold; 
+            }
+            QPushButton:hover { background-color: #1976D2; }
+            QPushButton:pressed { background-color: #0d47a1; }
+            QPushButton:disabled { 
+                background-color: #cccccc; color: #666666; 
+            }
+        """)
+        self.open_website_btn.clicked.connect(self.on_open_website)
+        self.open_website_btn.setEnabled(False)  # 預設禁用，等待選擇記錄
+        
+        self.website_status_label = QLabel("請先選擇一個網站")
+        self.website_status_label.setStyleSheet("color: #666666; font-style: italic;")
+        
+        button_layout.addWidget(self.open_website_btn)
+        button_layout.addWidget(self.website_status_label)
+        button_layout.addStretch()
+        
+        layout.addLayout(button_layout)
+        
+        # 連接表格選擇變化事件
+        self.table_widget.selection_changed.connect(self.on_website_selection_changed)
+    
+    def on_website_selection_changed(self):
+        """處理網站選擇變化事件（僅限網站管理分頁）"""
+        if self.table_type != 'website':
+            return
+            
+        record = self.get_current_record()
+        if record:
+            website_url = record.get('Website', '').strip()
+            
+            if website_url:
+                self.open_website_btn.setEnabled(True)
+                # 顯示網站域名或簡化的URL
+                try:
+                    parsed_url = urllib.parse.urlparse(website_url)
+                    display_name = parsed_url.netloc or website_url
+                    if len(display_name) > 30:
+                        display_name = display_name[:30] + "..."
+                    self.open_website_btn.setText(f"開啟網站: {display_name}")
+                except:
+                    self.open_website_btn.setText(f"開啟網站: {website_url[:30]}...")
+                
+                self.website_status_label.setText("網站可以開啟")
+                self.website_status_label.setStyleSheet("color: green; font-style: normal;")
+            else:
+                self.open_website_btn.setEnabled(False)
+                self.open_website_btn.setText("開啟網站")
+                self.website_status_label.setText("網站網址為空")
+                self.website_status_label.setStyleSheet("color: #666666; font-style: italic;")
+        else:
+            self.open_website_btn.setEnabled(False)
+            self.open_website_btn.setText("開啟網站")
+            self.website_status_label.setText("請先選擇一個網站")
+            self.website_status_label.setStyleSheet("color: #666666; font-style: italic;")
+    
+    def on_open_website(self):
+        """開啟選中的網站"""
+        if self.table_type != 'website':
+            return
+            
+        record = self.get_current_record()
+        if not record:
+            return
+            
+        website_url = record.get('Website', '').strip()
+        account = record.get('account', '').strip()
+        account_webid = record.get('account_webid', '').strip()
+        password = record.get('password', '').strip()
+        password_webid = record.get('password_webid', '').strip()
+        
+        if not website_url:
+            QMessageBox.warning(self, "警告", "網站網址為空，無法開啟")
+            return
+        
+        try:
+            # 確保 URL 有正確的協議
+            if not website_url.startswith(('http://', 'https://')):
+                # 如果沒有協議，預設使用 https
+                website_url = 'https://' + website_url
+            
+            # 如果有帳號密碼或 webid，使用 web_login.py 進行開啟和登入
+            if account or password or account_webid or password_webid:
+                # 建構 web_login.py 命令行參數
+                try:
+                    import sys
+                    import os
+                    
+                    # 使用絕對路徑執行 web_login.exe
+                    exe_path = os.path.abspath("web_login_tool/dist/web_login.exe")
+                    
+                    if not os.path.exists(exe_path):
+                        # 如果執行檔不存在，回退到普通瀏覽器開啟
+                        QMessageBox.warning(self, "警告", "找不到 web_login.exe 程式，使用普通瀏覽器開啟網站")
+                        webbrowser.open(website_url)
+                        QMessageBox.information(self, "成功", f"已開啟網站: {website_url}")
+                        return
+                    
+                    # 準備參數 - 使用與測試成功相同的格式
+                    args = [
+                        "-u", website_url,
+                        "-username", account if account else "admin",  # 如果帳號為空則使用預設 admin
+                        "-password", password if password else "gsi5613686#"  # 如果密碼為空則使用預設密碼
+                    ]
+                    
+                    # 如果有自定義的 webid，添加到參數中
+                    #if account_webid:
+                    #    args.extend(["-username_webid", account_webid])
+                    #if password_webid:
+                    #    args.extend(["-password_webid", password_webid])
+                    
+                    try:
+                        # 使用 subprocess.run 執行並等待完成
+                        result = subprocess.run([exe_path] + args, capture_output=True, text=True, timeout=30)
+                        
+                        if result.returncode == 0:
+                            # 檢查輸出是否包含成功訊息
+                            if "SUCCESS" in result.stdout or "登入成功" in result.stdout:
+                                QMessageBox.information(self, "成功", "已開啟網站並自動登入")
+                            else:
+                                QMessageBox.information(self, "成功", "已開啟網站並執行登入程序")
+                        else:
+                            # 如果執行失敗，但網站已開啟
+                            if "ERROR" in result.stderr:
+                                QMessageBox.information(self, "部分成功", "已開啟網站（執行過程中遇到問題）")
+                            else:
+                                QMessageBox.information(self, "成功", "已開啟網站")
+                            
+                    except subprocess.TimeoutExpired:
+                        QMessageBox.information(self, "成功", "已開啟網站（登入程序仍在執行中）")
+                    
+                except FileNotFoundError:
+                    # web_login.py 不存在，回退到普通瀏覽器開啟
+                    QMessageBox.warning(self, "警告", "找不到 web_login.py 程式，使用普通瀏覽器開啟網站")
+                    webbrowser.open(website_url)
+                    QMessageBox.information(self, "成功", f"已開啟網站: {website_url}")
+                except Exception as e:
+                    # 其他錯誤，回退到普通瀏覽器開啟
+                    QMessageBox.warning(self, "警告", f"自動登入過程發生錯誤: {str(e)}")
+                    webbrowser.open(website_url)
+                    QMessageBox.information(self, "成功", f"已開啟網站: {website_url}")
+            else:
+                # 沒有帳號密碼，直接使用瀏覽器開啟
+                webbrowser.open(website_url)
+                QMessageBox.information(self, "成功", f"已開啟網站: {website_url}")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "錯誤", f"開啟網站時發生錯誤: {str(e)}")
     def update_table_title(self):
         """更新表格標題"""
         if self.table_type == 'cmd':
             title = "命令工具資料表"
-        else:
+        elif self.table_type == 'prompt':
             title = "提示工具資料表"
+        elif self.table_type == 'winprogram':
+            title = "Windows 程式資料表"
+        elif self.table_type == 'website':
+            title = "網站管理資料表"
+        else:
+            title = "未知資料表"
         
         if self.table_title_label:
             self.table_title_label.setText(title)

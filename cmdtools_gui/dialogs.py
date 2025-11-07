@@ -21,7 +21,7 @@ class EditRecordDialog(QDialog):
         
         Args:
             parent: 父視窗
-            table_type: 表格類型 ('cmd' 或 'prompt')
+            table_type: 表格類型 ('cmd', 'prompt', 'winprogram', 'website')
             record: 現有記錄資料（編輯模式）
             is_edit: 是否為編輯模式
         """
@@ -35,9 +35,17 @@ class EditRecordDialog(QDialog):
     
     def init_ui(self):
         """初始化 UI"""
-        self.setWindowTitle(f"{'編輯' if self.is_edit else '新增'}{'命令工具' if self.table_type == 'cmd' else '提示工具'}")
+        # 設定對話框標題
+        title_mapping = {
+            'cmd': '命令工具',
+            'prompt': '提示工具',
+            'winprogram': 'Windows 程式',
+            'website': '網站管理'
+        }
+        table_title = title_mapping.get(self.table_type, '未知表格')
+        self.setWindowTitle(f"{'編輯' if self.is_edit else '新增'}{table_title}")
         self.setModal(True)
-        self.resize(400, 300)
+        self.resize(500, 400)
         
         layout = QVBoxLayout()
         
@@ -58,7 +66,7 @@ class EditRecordDialog(QDialog):
             form_layout.addRow("備註2:", self.remark2_input)
             form_layout.addRow("類型:", self.type_input)
             
-        else:
+        elif self.table_type == 'prompt':
             # 提示工具表單
             self.prompt_input = QTextEdit()
             self.prompt_eng_input = QTextEdit()
@@ -71,6 +79,35 @@ class EditRecordDialog(QDialog):
             form_layout.addRow("提示:", self.prompt_input)
             form_layout.addRow("提示英文:", self.prompt_eng_input)
             form_layout.addRow("分類:", self.classification_input)
+            
+        elif self.table_type == 'winprogram':
+            # Windows 程式表單
+            self.remark1_input = QLineEdit()
+            self.program_path_and_name_input = QLineEdit()
+            self.click_end_run_input = QComboBox()
+            self.click_end_run_input.addItems(["是", "否"])
+            
+            form_layout.addRow("備註1:", self.remark1_input)
+            form_layout.addRow("程式路徑與名稱:", self.program_path_and_name_input)
+            form_layout.addRow("點擊後執行:", self.click_end_run_input)
+            
+        elif self.table_type == 'website':
+            # 網站管理表單
+            self.remark_input = QLineEdit()
+            self.classification_input = QLineEdit()
+            self.website_input = QLineEdit()
+            self.account_input = QLineEdit()
+            self.account_webid_input = QLineEdit()
+            self.password_input = QLineEdit()
+            self.password_webid_input = QLineEdit()
+            
+            form_layout.addRow("備註:", self.remark_input)
+            form_layout.addRow("分類:", self.classification_input)
+            form_layout.addRow("網站:", self.website_input)
+            form_layout.addRow("帳號:", self.account_input)
+            form_layout.addRow("帳號ID:", self.account_webid_input)
+            form_layout.addRow("密碼:", self.password_input)
+            form_layout.addRow("密碼ID:", self.password_webid_input)
         
         layout.addLayout(form_layout)
         
@@ -100,10 +137,27 @@ class EditRecordDialog(QDialog):
                 self.remark1_input.setText(self.record.get('remark1', ''))
                 self.remark2_input.setText(self.record.get('remark2', ''))
                 self.type_input.setText(self.record.get('Type', ''))
-            else:
+            elif self.table_type == 'prompt':
                 self.prompt_input.setText(self.record.get('Prompt', ''))
                 self.prompt_eng_input.setText(self.record.get('Prompt_Eng', ''))
                 self.classification_input.setText(self.record.get('Classification', ''))
+            elif self.table_type == 'winprogram':
+                self.remark1_input.setText(self.record.get('remark1', ''))
+                self.program_path_and_name_input.setText(self.record.get('ProgramPathAndName', ''))
+                click_end_run = self.record.get('ClickEndRun', None)
+                if click_end_run is not None:
+                    if click_end_run == 1:
+                        self.click_end_run_input.setCurrentText("是")
+                    else:
+                        self.click_end_run_input.setCurrentText("否")
+            elif self.table_type == 'website':
+                self.remark_input.setText(self.record.get('Remark', ''))
+                self.classification_input.setText(self.record.get('Classification', ''))
+                self.website_input.setText(self.record.get('Website', ''))
+                self.account_input.setText(self.record.get('account', ''))
+                self.account_webid_input.setText(self.record.get('account_webid', ''))
+                self.password_input.setText(self.record.get('password', ''))
+                self.password_webid_input.setText(self.record.get('password_webid', ''))
     
     def accept_data(self):
         """驗證並接受資料"""
@@ -112,10 +166,20 @@ class EditRecordDialog(QDialog):
             if not self.cmd_input.text().strip():
                 QMessageBox.warning(self, "驗證錯誤", "命令欄位不能為空")
                 return
-        else:
+        elif self.table_type == 'prompt':
             # 驗證提示工具資料
             if not self.prompt_input.toPlainText().strip():
                 QMessageBox.warning(self, "驗證錯誤", "提示欄位不能為空")
+                return
+        elif self.table_type == 'winprogram':
+            # 驗證 Windows 程式資料
+            if not self.program_path_and_name_input.text().strip():
+                QMessageBox.warning(self, "驗證錯誤", "程式路徑與名稱欄位不能為空")
+                return
+        elif self.table_type == 'website':
+            # 驗證網站管理資料
+            if not self.website_input.text().strip():
+                QMessageBox.warning(self, "驗證錯誤", "網站欄位不能為空")
                 return
         
         self.accept()
@@ -130,11 +194,29 @@ class EditRecordDialog(QDialog):
                 'remark2': self.remark2_input.text().strip(),
                 'Type': self.type_input.text().strip()
             }
-        else:
+        elif self.table_type == 'prompt':
             return {
                 'Prompt': self.prompt_input.toPlainText().strip(),
                 'Prompt_Eng': self.prompt_eng_input.toPlainText().strip(),
                 'Classification': self.classification_input.text().strip()
+            }
+        elif self.table_type == 'winprogram':
+            # 轉換 "是"/"否" 為 1/0
+            click_end_run = 1 if self.click_end_run_input.currentText() == "是" else 0
+            return {
+                'remark1': self.remark1_input.text().strip(),
+                'ProgramPathAndName': self.program_path_and_name_input.text().strip(),
+                'ClickEndRun': click_end_run
+            }
+        elif self.table_type == 'website':
+            return {
+                'Remark': self.remark_input.text().strip(),
+                'Classification': self.classification_input.text().strip(),
+                'Website': self.website_input.text().strip(),
+                'account': self.account_input.text().strip(),
+                'account_webid': self.account_webid_input.text().strip(),
+                'password': self.password_input.text().strip(),
+                'password_webid': self.password_webid_input.text().strip()
             }
 
 
