@@ -1,0 +1,238 @@
+.app {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #f0f2f5; /* 更柔和的背景色 */
+  min-height: 100vh; /* 確保整個視窗都有背景色 */
+}
+
+header {
+  background: linear-gradient(135deg, #4a00e0 0%, #8e2de2 100%); /* 更深、更活潑的漸變 */
+  color: white;
+  padding: 25px 30px; /* 增加內邊距 */
+  border-radius: 12px; /* 輕微增加圓角 */
+  margin-bottom: 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* 增加陰影 */
+}
+
+header h1 {
+  margin: 0;
+  font-size: 2em;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9em;
+}
+
+.status-indicator {
+  font-size: 1.2em;
+}
+
+.status-indicator.connected {
+  color: #4CAF50;
+}
+
+.status-indicator.disconnected {
+  color: #f44336;
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  background: #ffffff; /* 淺色背景 */
+  border: 1px solid #ddd; /* 增加邊框 */
+  border-bottom: none;
+  padding: 12px 20px;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  position: relative;
+  color: #555;
+}
+
+.tab:hover {
+  background: #d0d0d0;
+}
+
+.tab.active {
+  background: #4a00e0; /* 匹配新的 header 顏色 */
+  color: white;
+  border-color: #4a00e0;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1); /* 增加陰影使其浮起 */
+  z-index: 1; /* 確保它在內容區塊之上 */
+}
+
+.tab .count {
+  background: rgba(255, 255, 255, 0.3);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+.filter-container {
+  margin-bottom: 20px;
+}
+
+.filter-input {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 16px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.3s ease;
+}
+
+.filter-input:focus {
+  border-color: #4a00e0;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(74, 0, 224, 0.2);
+}
+
+.content {
+  background: white;
+  border-radius: 0 12px 12px 12px; /* 匹配新的圓角 */
+  padding: 25px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1); /* 更明顯的陰影 */
+  min-height: 400px;
+  border-top: 4px solid #4a00e0; /* 增加頂部強調線 */
+}
+
+.table-container h3 {
+  color: #333;
+  margin-bottom: 15px;
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 8px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.data-table th {
+  background: #4a00e0; /* 匹配新的顏色 */
+  color: white;
+  padding: 12px 15px; /* 增加內邊距 */
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+  position: sticky; /* 讓表頭固定 */
+  top: 0;
+  z-index: 10;
+}
+
+.data-table td {
+  padding: 12px 15px; /* 增加內邊距 */
+  border-bottom: 1px solid #eee;
+  font-size: 13px;
+  vertical-align: top; /* 頂部對齊 */
+}
+
+.data-table tr:nth-child(even) { /* 隔行換色 */
+  background-color: #f9f9f9;
+}
+
+.data-table tr:hover {
+  background-color: #eef2ff; /* 更有活力的懸停顏色 */
+}
+
+.no-data {
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  padding: 40px;
+}
+
+.loading {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.loading h2 {
+  color: #4a00e0; /* 匹配新的顏色 */
+  margin-bottom: 20px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #4a00e0; /* 匹配新的顏色 */
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error {
+  text-align: center;
+  padding: 40px;
+  color: #f44336;
+}
+
+.error h2 {
+  margin-bottom: 15px;
+}
+
+footer {
+  margin-top: 30px;
+  text-align: center;
+  color: #666;
+  font-size: 12px;
+  border-top: 1px solid #eee;
+  padding-top: 15px;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+  .app {
+    padding: 10px;
+  }
+  
+  header {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+    padding: 20px; /* 響應式調整內邊距 */
+  }
+  
+  .tabs {
+    flex-direction: column;
+  }
+  
+  .tab {
+    width: 100%;
+    text-align: left;
+  }
+  
+  .data-table {
+    font-size: 12px;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 6px 4px;
+  }
+}
