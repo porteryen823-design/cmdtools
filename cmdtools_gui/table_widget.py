@@ -7,103 +7,73 @@
 from PyQt5.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QWidget,
     QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton,
-    QLabel, QGroupBox, QMessageBox
+    QLabel, QGroupBox, QMessageBox, QFileDialog
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 from typing import List, Dict, Callable
 import subprocess
 import os
 import platform
-import webbrowser
+import json
 import urllib.parse
 import time
+import webbrowser
 
 
 class FilterWidget(QWidget):
-    """篩選控制項組件"""
+    """簡化後的單一搜尋框篩選控制項組件"""
     
-    def __init__(self, parent=None, fields=None):
-        """
-        初始化篩選控制項
-        
-        Args:
-            parent: 父視窗
-            fields: 欄位清單，例如 ['cmd', 'example', 'remark1', ...]
-        """
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.fields = fields or []
-        self.field_inputs = {}
+        self.search_input = None
         self.search_callback = None  # 搜尋回調函數
         
         self.init_ui()
     
     def init_ui(self):
         """初始化 UI"""
-        layout = QVBoxLayout()
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         
-        # 為每個欄位創建搜尋控制項
-        for field in self.fields:
-            field_layout = QHBoxLayout()
-            
-            # 欄位標籤
-            field_label = QLabel(f"{field}:")
-            field_label.setFixedWidth(80)
-            
-            # 搜尋輸入框
-            search_input = QLineEdit()
-            search_input.setPlaceholderText(f"搜尋 {field}...")
-            search_input.textChanged.connect(lambda text, f=field: self.on_search_text_changed(f, text))
-            
-            # 搜尋按鈕
-            search_button = QPushButton("搜尋")
-            search_button.clicked.connect(lambda checked, f=field: self.on_search_clicked(f))
-            
-            # 清除按鈕
-            clear_button = QPushButton("清除")
-            clear_button.clicked.connect(lambda checked, f=field: self.on_clear_clicked(f))
-            
-            field_layout.addWidget(field_label)
-            field_layout.addWidget(search_input)
-            field_layout.addWidget(search_button)
-            field_layout.addWidget(clear_button)
-            
-            self.field_inputs[field] = {
-                'input': search_input,
-                'search_btn': search_button,
-                'clear_btn': clear_button
-            }
-            
-            layout.addLayout(field_layout)
+        # 搜尋標籤
+        search_label = QLabel("搜尋:")
+        search_label.setStyleSheet("font-weight: bold; color: #2E8B57;")
+        layout.addWidget(search_label)
+        
+        # 搜尋輸入框
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("在所有欄位中搜尋...")
+        self.search_input.textChanged.connect(self.on_search_text_changed)
+        layout.addWidget(self.search_input)
+        
+        # 清除按鈕
+        clear_button = QPushButton("清除")
+        clear_button.clicked.connect(self.on_clear_clicked)
+        layout.addWidget(clear_button)
+        
+        layout.addStretch()
         
         self.setLayout(layout)
     
-    def on_search_text_changed(self, field, text):
+    def on_search_text_changed(self, text):
         """搜尋文字變化時觸發（即時搜尋）"""
-        self.on_search_clicked(field)
-    
-    def on_search_clicked(self, field):
-        """點擊搜尋按鈕"""
-        search_text = self.field_inputs[field]['input'].text()
         if self.search_callback:
-            self.search_callback(field, search_text)
+            self.search_callback(text)
     
-    def on_clear_clicked(self, field):
+    def on_clear_clicked(self):
         """點擊清除按鈕"""
-        self.field_inputs[field]['input'].clear()
+        self.search_input.clear()
         if self.search_callback:
-            self.search_callback(field, "")
+            self.search_callback("")
     
-    def get_all_filters(self) -> Dict[str, str]:
-        """取得所有篩選條件"""
-        filters = {}
-        for field, widgets in self.field_inputs.items():
-            filters[field] = widgets['input'].text()
-        return filters
+    def get_search_text(self) -> str:
+        """取得搜尋文字"""
+        return self.search_input.text() if self.search_input else ""
     
-    def clear_all_filters(self):
-        """清除所有篩選條件"""
-        for field, widgets in self.field_inputs.items():
-            widgets['input'].clear()
+    def set_search_text(self, text: str):
+        """設定搜尋文字"""
+        if self.search_input:
+            self.search_input.setText(text)
     
     def set_search_callback(self, callback: Callable):
         """設定搜尋回調函數"""
@@ -346,30 +316,12 @@ class TableTabWidget(QWidget):
         self.table_title_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #2E8B57;")
         layout.addWidget(self.table_title_label)
         
-        # 篩選控制項區域
+        # 篩選控制項區域（使用簡化後的 FilterWidget）
         filter_group = QGroupBox("搜尋篩選")
         filter_layout = QVBoxLayout()
         
-        if self.table_type == 'cmd':
-            # 命令工具篩選控制項（已移除 remark2）
-            cmd_fields = ['cmd', 'example', 'remark1', 'Classification']
-            self.filter_widget = FilterWidget(fields=cmd_fields)
-        elif self.table_type == 'prompt':
-            # 提示工具篩選控制項
-            prompt_fields = ['Prompt', 'Prompt_Eng', 'Classification']
-            self.filter_widget = FilterWidget(fields=prompt_fields)
-        elif self.table_type == 'winprogram':
-            # Windows 程式篩選控制項
-            winprogram_fields = ['remark1', 'ProgramPathAndName', 'ClickEndRun']
-            self.filter_widget = FilterWidget(fields=winprogram_fields)
-        elif self.table_type == 'website':
-            # 網站篩選控制項
-            website_fields = ['Remark', 'Classification', 'Website', 'account', 'account_webid', 'password', 'password_webid']
-            self.filter_widget = FilterWidget(fields=website_fields)
-        else:
-            # 預設篩選控制項
-            self.filter_widget = FilterWidget(fields=[])
-        
+        # 使用簡化的 FilterWidget，無需傳入 fields
+        self.filter_widget = FilterWidget()
         filter_layout.addWidget(self.filter_widget)
         filter_group.setLayout(filter_layout)
         layout.addWidget(filter_group)
@@ -383,6 +335,9 @@ class TableTabWidget(QWidget):
             self.create_execute_button(layout)
         elif self.table_type == 'website':
             self.create_open_website_button(layout)
+        
+        # 新增匯出/匯入按鈕
+        self.create_export_import_buttons(layout)
         
         self.setLayout(layout)
         
@@ -676,6 +631,7 @@ class TableTabWidget(QWidget):
             
         except Exception as e:
             QMessageBox.critical(self, "錯誤", f"開啟網站時發生錯誤: {str(e)}")
+
     def update_table_title(self):
         """更新表格標題"""
         if self.table_type == 'cmd':
@@ -692,23 +648,103 @@ class TableTabWidget(QWidget):
         if self.table_title_label:
             self.table_title_label.setText(title)
     
-    def on_field_search(self, field, keyword):
+    def on_field_search(self, keyword):
         """
-        處理欄位搜尋
-        
-        Args:
-            field: 搜尋欄位
-            keyword: 搜尋關鍵字
+        處理單一搜尋框搜尋
+        這個函數現在處理全欄位搜尋，與前端行為一致
         """
         if self.table_widget:
-            filters = {field: keyword}
-            # 清除其他欄位的搜尋
-            all_filters = self.filter_widget.get_all_filters()
-            for f in all_filters:
-                if f != field:
-                    all_filters[f] = ""
-            
-            self.table_widget.apply_filters(all_filters)
+            self.table_widget.apply_global_filter(keyword)
+    
+    def create_export_import_buttons(self, layout):
+        """創建匯出/匯入按鈕"""
+        button_layout = QHBoxLayout()
+        
+        export_btn = QPushButton("匯出資料庫")
+        export_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50; color: white; padding: 8px 16px;
+                border: none; border-radius: 4px; font-weight: bold;
+            }
+            QPushButton:hover { background-color: #45a049; }
+            QPushButton:pressed { background-color: #3d8b40; }
+        """)
+        export_btn.clicked.connect(self.on_export_database)
+        
+        import_btn = QPushButton("匯入資料庫")
+        import_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #2196F3; color: white; padding: 8px 16px;
+                border: none; border-radius: 4px; font-weight: bold;
+            }
+            QPushButton:hover { background-color: #1976D2; }
+            QPushButton:pressed { background-color: #0d47a1; }
+        """)
+        import_btn.clicked.connect(self.on_import_database)
+        
+        button_layout.addWidget(export_btn)
+        button_layout.addWidget(import_btn)
+        button_layout.addStretch()
+        
+        layout.addLayout(button_layout)
+    
+    def on_export_database(self):
+        """匯出整個資料庫到 JSON 檔案"""
+        # 取得所有表格資料
+        all_data = {
+            'cmd': self.table_widget.get_data() if hasattr(self.table_widget, 'get_data') else [],
+            'prompt': self.table_widget.get_data() if hasattr(self.table_widget, 'get_data') else [],
+            'winprogram': self.table_widget.get_data() if hasattr(self.table_widget, 'get_data') else [],
+            'website': self.table_widget.get_data() if hasattr(self.table_widget, 'get_data') else []
+        }
+        
+        # 讓使用者選擇儲存位置
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "匯出資料庫",
+            "database_export.json",
+            "JSON 檔案 (*.json);;所有檔案 (*)"
+        )
+        
+        if file_path:
+            try:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    json.dump(all_data, f, ensure_ascii=False, indent=2)
+                QMessageBox.information(self, "匯出成功", f"資料已匯出至 {file_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "匯出失敗", f"匯出時發生錯誤: {str(e)}")
+    
+    def on_import_database(self):
+        """從 JSON 檔案匯入資料庫"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "匯入資料庫",
+            "",
+            "JSON 檔案 (*.json);;所有檔案 (*)"
+        )
+        
+        if file_path:
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                
+                # 依表格類型插入資料
+                for table_type, records in data.items():
+                    if isinstance(records, list):
+                        for record in records:
+                            # 這裡假設有一個插入函式 insert_record(table_type, record)
+                            # 需要根據實際實現調整
+                            self.insert_record(table_type, record)
+                
+                QMessageBox.information(self, "匯入成功", f"資料已從 {file_path} 匯入")
+            except Exception as e:
+                QMessageBox.critical(self, "匯入失敗", f"匯入時發生錯誤: {str(e)}")
+    
+    def insert_record(self, table_type, record):
+        """插入單筆資料到資料庫（示例實作，需根據實際資料庫調整）"""
+        # 這裡僅示範，實際應使用資料庫連線執行 INSERT
+        # 例如使用 sqlite3 或 mysql.connector
+        pass
     
     def set_data_callback(self, callback: Callable):
         """設定資料操作回調函數"""
@@ -734,11 +770,16 @@ class TableTabWidget(QWidget):
             self.table_widget.apply_global_filter(keyword)
     
     def clear_all_filters(self):
-        """清除所有篩選"""
+        """清除所有篩選（重置為初始狀態）"""
         if self.filter_widget:
-            self.filter_widget.clear_all_filters()
+            self.filter_widget.set_search_text("")
         if self.table_widget:
-            self.table_widget.apply_filters({})
+            # 清除搜尋時顯示所有資料
+            self.table_widget.apply_global_filter("")
+            self.table_widget.update_table()
+            
+            # 記錄日誌（可選）
+            # print("已清除搜尋條件，顯示全部資料")
     
     def get_current_record(self) -> Dict:
         """取得目前選中的記錄"""

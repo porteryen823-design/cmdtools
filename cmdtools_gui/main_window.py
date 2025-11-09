@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QTabWidget, QLineEdit, QPushButton, QLabel,
     QMessageBox, QStatusBar, QProgressBar, QDialog,
-    QApplication, QFrame, QSplitter, QSystemTrayIcon, QMenu
+    QApplication, QFrame, QSplitter, QSystemTrayIcon, QMenu, QFileDialog
 )
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QEvent
 from PyQt5.QtGui import QIcon, QFont
@@ -303,13 +303,37 @@ class MainWindow(QMainWindow):
         # 更新資料庫按鈕
         self.update_db_btn = QPushButton("更新資料庫")
         self.update_db_btn.setStyleSheet("""
-            QPushButton { background-color: #607D8B; color: white; padding: 8px 16px; 
+            QPushButton { background-color: #607D8B; color: white; padding: 8px 16px;
                          border: none; border-radius: 4px; font-weight: bold; }
             QPushButton:hover { background-color: #455A64; }
             QPushButton:pressed { background-color: #263238; }
         """)
         self.update_db_btn.clicked.connect(self.on_update_database)
         button_layout.addWidget(self.update_db_btn)
+        
+        button_layout.addSpacing(20)
+        
+        # 匯出整個資料庫按鈕
+        self.export_all_btn = QPushButton("匯出整個資料庫")
+        self.export_all_btn.setStyleSheet("""
+            QPushButton { background-color: #9C27B0; color: white; padding: 8px 16px;
+                         border: none; border-radius: 4px; font-weight: bold; }
+            QPushButton:hover { background-color: #7B1FA2; }
+            QPushButton:pressed { background-color: #4A148C; }
+        """)
+        self.export_all_btn.clicked.connect(self.on_export_all_database)
+        button_layout.addWidget(self.export_all_btn)
+        
+        # 從JSON檔匯入按鈕
+        self.import_btn = QPushButton("從JSON檔匯入")
+        self.import_btn.setStyleSheet("""
+            QPushButton { background-color: #E91E63; color: white; padding: 8px 16px;
+                         border: none; border-radius: 4px; font-weight: bold; }
+            QPushButton:hover { background-color: #C2185B; }
+            QPushButton:pressed { background-color: #880E4F; }
+        """)
+        self.import_btn.clicked.connect(self.on_import_database)
+        button_layout.addWidget(self.import_btn)
         
         button_layout.addStretch()
         
@@ -579,6 +603,90 @@ class MainWindow(QMainWindow):
         """更新資料庫"""
         if self.db_manager:
             self.load_all_data()
+    
+    def on_export_all_database(self):
+        """匯出整個資料庫"""
+        if not self.db_manager:
+            return
+        
+        # 從匯出對話框獲取文件路徑
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "匯出整個資料庫",
+            f"cmdtools_database_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+            "JSON 檔案 (*.json);;所有檔案 (*)"
+        )
+        
+        if file_path:
+            if not file_path.endswith('.json'):
+                file_path += '.json'
+            self.execute_export_all_database(file_path)
+    
+    def on_import_database(self):
+        """從JSON檔匯入資料庫"""
+        if not self.db_manager:
+            return
+        
+        # 打開檔案選擇對話框
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "選擇要匯入的JSON檔案",
+            "",
+            "JSON 檔案 (*.json);;所有檔案 (*)"
+        )
+        
+        if file_path:
+            self.execute_import_database(file_path)
+    
+    def execute_export_all_database(self, file_path):
+        """執行匯出整個資料庫"""
+        try:
+            self.update_status("正在匯出整個資料庫...")
+            
+            # 記錄日誌
+            self.log_operation("匯出整個資料庫", "all", data={'file_path': file_path})
+            
+            # 執行匯出
+            success, message = self.db_manager.export_all_database(file_path)
+            
+            if success:
+                QMessageBox.information(
+                    self,
+                    "匯出成功",
+                    f"整個資料庫已成功匯出至:\n{file_path}"
+                )
+                self.update_status("資料庫匯出完成")
+            else:
+                self.show_error_message(message)
+                
+        except Exception as e:
+            self.show_error_message(f"匯出整個資料庫時發生錯誤: {e}")
+    
+    def execute_import_database(self, file_path):
+        """執行從JSON檔匯入資料庫"""
+        try:
+            self.update_status("正在匯入資料庫...")
+            
+            # 記錄日誌
+            self.log_operation("從JSON檔匯入資料庫", "all", data={'file_path': file_path})
+            
+            # 執行匯入
+            success, message = self.db_manager.import_from_json_file(file_path)
+            
+            if success:
+                QMessageBox.information(
+                    self,
+                    "匯入成功",
+                    message
+                )
+                # 重新載入資料
+                self.load_all_data()
+                self.update_status("資料庫匯入完成")
+            else:
+                self.show_error_message(message)
+                
+        except Exception as e:
+            self.show_error_message(f"匯入資料庫時發生錯誤: {e}")
     
     def execute_add_record(self, table_type, data):
         """執行新增記錄"""

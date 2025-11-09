@@ -584,12 +584,12 @@ class DatabaseManager:
         return filtered_data
     
     # 匯出功能
-    
-    def export_to_json(self, data: List[Dict], table_name: str, 
+     
+    def export_to_json(self, data: List[Dict], table_name: str,
                       total_count: int, filtered_count: int) -> str:
-        """匯出資料為 JSON 格式"""
+        """匯出單一表格資料為 JSON 格式（舊匯出功能保留）"""
         from datetime import datetime
-        
+         
         export_data = {
             "export_time": datetime.now().isoformat(),
             "table_name": table_name,
@@ -597,5 +597,175 @@ class DatabaseManager:
             "filtered_records": filtered_count,
             "data": data
         }
-        
+         
         return json.dumps(export_data, ensure_ascii=False, indent=2)
+    
+    def export_all_database(self, file_path: str):
+        """
+        匯出整個資料庫到單一 JSON 檔案。
+        結構：
+        {
+          "export_time": "...",
+          "tables": {
+            "CmdTools": [...],
+            "PromptTools": [...],
+            "WinProgram": [...],
+            "WebSite": [...]
+          }
+        }
+        """
+        from datetime import datetime
+    
+        if not self.connection or not self.connection.is_connected():
+            if not self.connect():
+                return False, "無法連線到資料庫，匯出失敗"
+    
+        try:
+            # 確保最新資料
+            load_ok, load_msg = self.load_all_data()
+            if not load_ok:
+                return False, f"載入資料失敗：{load_msg}"
+    
+            export_payload = {
+                "export_time": datetime.now().isoformat(),
+                "tables": {
+                    "CmdTools": self.cmd_tools_data,
+                    "PromptTools": self.prompt_tools_data,
+                    "WinProgram": self.win_program_data,
+                    "WebSite": self.web_site_data,
+                }
+            }
+    
+            # 建立目錄（若需要）
+            os.makedirs(os.path.dirname(file_path), exist_ok=True) if os.path.dirname(file_path) else None
+    
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(export_payload, f, ensure_ascii=False, indent=2)
+    
+            return True, "整個資料庫匯出成功"
+    
+        except Exception as e:
+            return False, f"匯出整個資料庫時發生錯誤: {e}"
+    
+    def import_from_json_file(self, file_path: str):
+        """
+        從 JSON 檔匯入整個資料庫。
+        規則：
+        - 僅支援本函式輸出的結構或相容格式：
+          { "tables": { "CmdTools": [...], "PromptTools": [...], "WinProgram": [...], "WebSite": [...] } }
+        - 先 TRUNCATE 這四張表，再重新插入 JSON 資料。
+        - 若任一步驟失敗，整體 ROLLBACK。
+        - 注意：此操作具破壞性，請在 UI 端先提醒使用者備份。
+        """
+        if not os.path.exists(file_path):
+            return False, f"找不到指定檔案: {file_path}"
+    
+        if not self.connection or not self.connection.is_connected():
+            if not self.connect():
+                return False, "無法連線到資料庫，匯入失敗"
+    
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = json.load(f)
+    
+            # 兼容格式判斷
+            if "tables" in content and isinstance(content["tables"], dict):
+                tables = content["tables"]
+            else:
+                # 若沒有 tables，就視為不支援的格式
+                return False, "JSON 格式不正確，缺少 'tables' 區塊"
+    
+            cmdtools_rows = tables.get("CmdTools", [])
+            prompt_rows = tables.get("PromptTools", [])
+            win_rows = tables.get("WinProgram", [])
+            web_rows = tables.get("WebSite", [])
+    
+            cursor = self.connection.cursor()
+            try:
+                # 使用交易保護
+                self.connection.start_transaction()
+    
+                # 清空既有資料
+                cursor.execute("TRUNCATE TABLE CmdTools")
+                cursor.execute("TRUNCATE TABLE PromptTools")
+                cursor.execute("TRUNCATE TABLE WinProgram")
+                cursor.execute("TRUNCATE TABLE WebSite")
+    
+                # 匯入 CmdTools
+                for row in cmdtools_rows:
+                    cursor.execute(
+                        """
+                        INSERT INTO CmdTools (cmd, example, remark1, Classification)
+                        VALUES (%s, %s, %s, %s)
+                        """,
+                        (
+                            row.get("cmd", ""),
+                            row.get("example", ""),
+                            row.get("remark1", ""),
+                            row.get("Classification", ""),
+                        ),
+                    )
+    
+                # 匯入 PromptTools
+                for row in prompt_rows:
+                    cursor.execute(
+                        """
+                        INSERT INTO PromptTools (Prompt, Prompt_Eng, Classification)
+                        VALUES (%s, %s, %s)
+                        """,
+                        (
+                            row.get("Prompt", ""),
+                            row.get("Prompt_Eng", ""),
+                            row.get("Classification", ""),
+                        ),
+                    )
+    
+                # 匯入 WinProgram
+                for row in win_rows:
+                    cursor.execute(
+                        """
+                        INSERT INTO WinProgram (remark1, ProgramPathAndName, ClickEndRun)
+                        VALUES (%s, %s, %s)
+                        """,
+                        (
+                            row.get("remark1", ""),
+                            row.get("ProgramPathAndName", ""),
+                            int(row.get("ClickEndRun", 0) or 0),
+                        ),
+                    )
+    
+                # 匯入 WebSite
+                for row in web_rows:
+                    cursor.execute(
+                        """
+                        INSERT INTO WebSite
+                        (Remark, Classification, Website, account, account_webid, password, password_webid)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            row.get("Remark", ""),
+                            row.get("Classification", ""),
+                            row.get("Website", ""),
+                            row.get("account", ""),
+                            row.get("account_webid", ""),
+                            row.get("password", ""),
+                            row.get("password_webid", ""),
+                        ),
+                    )
+    
+                # 提交交易
+                self.connection.commit()
+                cursor.close()
+    
+                # 重新載入快取
+                self.load_all_data()
+    
+                return True, "從 JSON 匯入資料庫成功"
+    
+            except Exception as e:
+                self.connection.rollback()
+                cursor.close()
+                return False, f"匯入資料時發生錯誤，已還原變更: {e}"
+    
+        except Exception as e:
+            return False, f"讀取或解析 JSON 檔案時發生錯誤: {e}"
