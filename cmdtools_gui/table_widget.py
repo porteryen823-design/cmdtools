@@ -144,8 +144,8 @@ class DataTableWidget(QTableWidget):
         
         # 設置表頭
         if self.table_type == 'cmd':
-            self.setColumnCount(6)
-            headers = ["序號", "命令", "範例", "備註1", "備註2", "類型"]
+            self.setColumnCount(5)
+            headers = ["序號", "命令", "範例", "備註1", "類型"]
         elif self.table_type == 'prompt':
             self.setColumnCount(4)
             headers = ["序號", "提示", "提示英文", "分類"]
@@ -203,13 +203,12 @@ class DataTableWidget(QTableWidget):
         
         for row, record in enumerate(self.filtered_data):
             if self.table_type == 'cmd':
-                # CmdTools 表格
+                # CmdTools 表格（已移除 remark2 欄位）
                 self.setItem(row, 0, QTableWidgetItem(str(record.get('iSeqNo', ''))))
                 self.setItem(row, 1, QTableWidgetItem(str(record.get('cmd', ''))))
                 self.setItem(row, 2, QTableWidgetItem(str(record.get('example', ''))))
                 self.setItem(row, 3, QTableWidgetItem(str(record.get('remark1', ''))))
-                self.setItem(row, 4, QTableWidgetItem(str(record.get('remark2', ''))))
-                self.setItem(row, 5, QTableWidgetItem(str(record.get('Classification', ''))))
+                self.setItem(row, 4, QTableWidgetItem(str(record.get('Classification', ''))))
             elif self.table_type == 'prompt':
                 # PromptTools 表格
                 self.setItem(row, 0, QTableWidgetItem(str(record.get('iSeqNo', ''))))
@@ -277,8 +276,8 @@ class DataTableWidget(QTableWidget):
             keyword_lower = keyword.lower()
             
             if self.table_type == 'cmd':
-                # CmdTools 全域搜尋：搜尋所有欄位
-                searchable_fields = ['cmd', 'example', 'remark1', 'remark2', 'Classification']
+                # CmdTools 全域搜尋：搜尋所有欄位（已移除 remark2）
+                searchable_fields = ['cmd', 'example', 'remark1', 'Classification']
             elif self.table_type == 'prompt':
                 # PromptTools 全域搜尋：搜尋所有欄位
                 searchable_fields = ['Prompt', 'Prompt_Eng', 'Classification']
@@ -352,8 +351,8 @@ class TableTabWidget(QWidget):
         filter_layout = QVBoxLayout()
         
         if self.table_type == 'cmd':
-            # 命令工具篩選控制項
-            cmd_fields = ['cmd', 'example', 'remark1', 'remark2', 'Classification']
+            # 命令工具篩選控制項（已移除 remark2）
+            cmd_fields = ['cmd', 'example', 'remark1', 'Classification']
             self.filter_widget = FilterWidget(fields=cmd_fields)
         elif self.table_type == 'prompt':
             # 提示工具篩選控制項

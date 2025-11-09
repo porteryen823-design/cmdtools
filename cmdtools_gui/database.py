@@ -63,9 +63,9 @@ class DatabaseManager:
                 return False, "無法連線到資料庫"
         
         try:
-            # 載入 CmdTools 資料
+            # 載入 CmdTools 資料（已移除 remark2 欄位）
             self.cmd_tools_data = self._load_table_data("CmdTools", [
-                "iSeqNo", "cmd", "example", "remark1", "remark2", "Classification"
+                "iSeqNo", "cmd", "example", "remark1", "Classification"
             ])
             
             # 載入 PromptTools 資料
@@ -123,14 +123,13 @@ class DatabaseManager:
             cursor = self.connection.cursor()
             
             sql = """
-                INSERT INTO CmdTools (cmd, example, remark1, remark2, Classification)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO CmdTools (cmd, example, remark1, Classification)
+                VALUES (%s, %s, %s, %s)
             """
             values = (
                 data.get('cmd', ''),
                 data.get('example', ''),
                 data.get('remark1', ''),
-                data.get('remark2', ''),
                 data.get('Classification', '')
             )
             
@@ -146,7 +145,6 @@ class DatabaseManager:
                 'cmd': data.get('cmd', ''),
                 'example': data.get('example', ''),
                 'remark1': data.get('remark1', ''),
-                'remark2': data.get('remark2', ''),
                 'Classification': data.get('Classification', '')
             }
             self.cmd_tools_data.append(new_record)
@@ -163,14 +161,13 @@ class DatabaseManager:
             cursor = self.connection.cursor()
             
             sql = """
-                UPDATE CmdTools SET cmd=%s, example=%s, remark1=%s, remark2=%s, Classification=%s
+                UPDATE CmdTools SET cmd=%s, example=%s, remark1=%s, Classification=%s
                 WHERE iSeqNo=%s
             """
             values = (
                 data.get('cmd', ''),
                 data.get('example', ''),
                 data.get('remark1', ''),
-                data.get('remark2', ''),
                 data.get('Classification', ''),
                 seq_no
             )
@@ -186,7 +183,6 @@ class DatabaseManager:
                         'cmd': data.get('cmd', ''),
                         'example': data.get('example', ''),
                         'remark1': data.get('remark1', ''),
-                        'remark2': data.get('remark2', ''),
                         'Classification': data.get('Classification', '')
                     })
                     break

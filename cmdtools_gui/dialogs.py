@@ -57,13 +57,11 @@ class EditRecordDialog(QDialog):
             self.cmd_input = QLineEdit()
             self.example_input = QLineEdit()
             self.remark1_input = QLineEdit()
-            self.remark2_input = QLineEdit()
             self.type_input = QLineEdit()
             
             form_layout.addRow("命令:", self.cmd_input)
             form_layout.addRow("範例:", self.example_input)
             form_layout.addRow("備註1:", self.remark1_input)
-            form_layout.addRow("備註2:", self.remark2_input)
             form_layout.addRow("類型:", self.type_input)
             
         elif self.table_type == 'prompt':
@@ -135,7 +133,6 @@ class EditRecordDialog(QDialog):
                 self.cmd_input.setText(self.record.get('cmd', ''))
                 self.example_input.setText(self.record.get('example', ''))
                 self.remark1_input.setText(self.record.get('remark1', ''))
-                self.remark2_input.setText(self.record.get('remark2', ''))
                 self.type_input.setText(self.record.get('Classification', ''))
             elif self.table_type == 'prompt':
                 self.prompt_input.setText(self.record.get('Prompt', ''))
@@ -191,7 +188,6 @@ class EditRecordDialog(QDialog):
                 'cmd': self.cmd_input.text().strip(),
                 'example': self.example_input.text().strip(),
                 'remark1': self.remark1_input.text().strip(),
-                'remark2': self.remark2_input.text().strip(),
                 'Classification': self.type_input.text().strip()
             }
         elif self.table_type == 'prompt':
