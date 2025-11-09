@@ -98,7 +98,6 @@ function App() {
       'cmd': '命令',
       'example': '範例',
       'remark1': '備註1',
-      'remark2': '備註2',
       'Classification': '類型',
       'Prompt': '提示',
       'Prompt_Eng': '英文提示',
