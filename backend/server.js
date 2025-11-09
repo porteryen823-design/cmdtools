@@ -6,7 +6,10 @@ const path = require('path');
 const { exec } = require('child_process');
 
 const app = express();
-const port = 3001;
+
+// 預設埠與最大重試偏移
+const DEFAULT_PORT = 3501;
+const MAX_PORT_OFFSET = 20; // 最多嘗試 20 個連續埠，例如 3001~3021
 
 // 允許跨域請求
 app.use(cors());
@@ -447,23 +450,70 @@ app.get('/health', async (req, res) => {
   });
 });
 
-// 啟動伺服器
-async function startServer() {
+/**
+ * 嘗試在指定埠啟動伺服器，若遇到 EACCES 或 EADDRINUSE，會遞增埠號再試。
+ * @param {number} portToTry 要嘗試的埠號
+ * @param {number} offset 已偏移次數
+ */
+async function tryListen(portToTry, offset = 0) {
+  if (offset > MAX_PORT_OFFSET) {
+    console.error(`❌ 在連續 ${MAX_PORT_OFFSET} 個埠上嘗試啟動皆失敗，請檢查系統埠占用或權限設定`);
+    process.exit(1);
+  }
+
   const isConnected = await testConnection();
   if (!isConnected) {
-    console.warn('⚠️  資料庫連線失敗，但伺服器仍會啟動');
+    console.warn('⚠️ 資料庫連線失敗，但伺服器仍會嘗試啟動 (此為預期設計)');
   }
-  
-  app.listen(port, () => {
-    console.log(`🚀 後端伺服器啟動，監聽埠號 ${port}`);
-    console.log(`📊 API端點:`);
-    console.log(`   - GET /api/data (所有資料)`);
-    console.log(`   - GET /api/cmd-tools (命令工具)`);
-    console.log(`   - GET /api/prompt-tools (提示工具)`);
-    console.log(`   - GET /api/win-programs (Windows程式)`);
-    console.log(`   - GET /api/websites (網站)`);
-    console.log(`   - GET /health (健康檢查)`);
-  });
+
+  const server = app
+    .listen(portToTry, () => {
+      const activePort = portToTry;
+      const portFilePath = path.join(__dirname, '..', 'frontend', 'public', 'backend_port.json');
+      
+      // 將實際埠號寫入前端可讀取的檔案
+      try {
+        fs.writeFileSync(portFilePath, JSON.stringify({ port: activePort }), 'utf8');
+        console.log(`✅ 後端埠號 ${activePort} 已寫入 ${path.basename(portFilePath)}`);
+      } catch (writeError) {
+        console.error('❌ 寫入埠號檔案失敗:', writeError.message);
+      }
+
+      console.log(`🚀 後端伺服器啟動成功，監聽埠號 ${activePort}`);
+      console.log('📊 API端點:');
+      console.log('   - GET /api/data (所有資料)');
+      console.log('   - GET /api/cmd-tools (命令工具)');
+      console.log('   - GET /api/prompt-tools (提示工具)');
+      console.log('   - GET /api/win-programs (Windows程式)');
+      console.log('   - GET /api/websites (網站)');
+      console.log('   - GET /health (健康檢查)');
+    })
+    .on('error', (err) => {
+      if (err.code === 'EACCES') {
+        console.error(`⚠️ 埠號 ${portToTry} 權限不足 (EACCES)，嘗試使用下一個埠...`);
+      } else if (err.code === 'EADDRINUSE') {
+        console.error(`⚠️ 埠號 ${portToTry} 已被占用 (EADDRINUSE)，嘗試使用下一個埠...`);
+      } else {
+        console.error(`❌ 無法在埠號 ${portToTry} 啟動伺服器:`, err);
+        process.exit(1);
+      }
+
+      // 延遲一點點再重試，避免過快重複觸發
+      const nextPort = portToTry + 1;
+      setTimeout(() => {
+        tryListen(nextPort, offset + 1);
+      }, 200);
+    });
+
+  return server;
+}
+
+// 啟動伺服器入口
+async function startServer() {
+  const startPort = Number(process.env.PORT) || DEFAULT_PORT;
+  console.log(`🔍 嘗試啟動後端伺服器，起始埠號 ${startPort} (最多偏移 ${MAX_PORT_OFFSET} 個埠)`);
+
+  await tryListen(startPort, 0);
 }
 
 startServer();

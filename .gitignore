@@ -19,4 +19,4 @@ Thumbs.db
 # 忽略依赖和构建目录
 node_modules/
 cmdtools_env/
-web_login_tool/build/
+web_login_tool/build/"frontend/public/backend_port.json" 

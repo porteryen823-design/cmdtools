@@ -14,48 +14,97 @@ function App() {
   const [activeTab, setActiveTab] = useState('cmd_tools');
   const [filterText, setFilterText] = useState(''); // 新增過濾文字狀態
   const [connectionStatus, setConnectionStatus] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1); // 當前頁碼
+  const itemsPerPage = 10; // 每頁顯示 10 筆資料
+
+  // 輔助函數：動態獲取後端 URL
+  const getBackendUrl = async () => {
+    try {
+      // 嘗試從 public/backend_port.json 獲取實際埠號
+      const response = await fetch('/backend_port.json');
+      if (response.ok) {
+        const { port } = await response.json();
+        if (port) {
+          console.log(`後端埠號從 backend_port.json 讀取成功: ${port}`);
+          return `http://localhost:${port}`;
+        }
+      }
+    } catch (e) {
+      console.warn('無法讀取 backend_port.json，使用預設埠 3001');
+    }
+    // 預設回退
+    return 'http://localhost:3001';
+  };
 
   useEffect(() => {
-    // 檢查健康狀態
-    axios.get('http://localhost:3001/health')
-      .then(response => {
-        setConnectionStatus(response.data);
+    // 當 activeTab 改變時，重設頁碼
+    setCurrentPage(1);
+  }, [activeTab]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const backendUrl = await getBackendUrl();
+      
+      // 檢查健康狀態
+      axios.get(`${backendUrl}/health`)
+        .then(response => {
+          setConnectionStatus(response.data);
+        })
+        .catch(err => {
+          setConnectionStatus({ status: 'unhealthy', database: 'disconnected' });
+        });
+
+      // 載入資料
+      axios.get(`${backendUrl}/api/data`)
+        .then(response => {
+          setData(response.data);
+        setLoading(false);
       })
       .catch(err => {
-        setConnectionStatus({ status: 'unhealthy', database: 'disconnected' });
-      });
-
-    // 載入資料
-    axios.get('http://localhost:3001/api/data')
-      .then(response => {
-        setData(response.data);
+        setError('無法取得資料: ' + (err.response?.data?.error || err.message));
         setLoading(false);
       })
       .catch(err => {
         setError('無法取得資料: ' + (err.response?.data?.error || err.message));
         setLoading(false);
       });
+    };
+
+    fetchData();
   }, []);
-  const getFilteredData = (tableData, filterText) => {
-    if (!filterText) return tableData;
-    const lowerCaseFilter = filterText.toLowerCase();
-    return tableData.filter(row => 
-      Object.values(row).some(value => 
-        String(value).toLowerCase().includes(lowerCaseFilter)
-      )
-    );
+  
+  const getFilteredAndPaginatedData = (tableData, filterText, page, itemsPerPage) => {
+    // 1. 過濾
+    let filteredData = tableData;
+    if (filterText) {
+      const lowerCaseFilter = filterText.toLowerCase();
+      filteredData = tableData.filter(row =>
+        Object.values(row).some(value =>
+          String(value).toLowerCase().includes(lowerCaseFilter)
+        )
+      );
+    }
+
+    // 2. 分頁
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedData = filteredData.slice(startIndex, endIndex);
+
+    return {
+      filteredData, // 包含所有過濾後的資料 (用於計算總頁數)
+      paginatedData // 僅包含當前頁的資料 (用於渲染表格)
+    };
   };
 
-  const renderTable = (tableData, tableName) => {
-    if (!tableData || tableData.length === 0) {
+  const renderTable = (paginatedData, tableName) => {
+    if (!paginatedData || paginatedData.length === 0) {
       return <div className="no-data">此資料表無資料</div>;
     }
 
-    const columns = Object.keys(tableData[0]);
+    const columns = Object.keys(paginatedData[0]);
     
     return (
       <div className="table-container">
-        <h3>{getTableDisplayName(tableName)} ({tableData.length} 筆記錄)</h3>
         <div style={{ overflowX: 'auto' }}> {/* 新增可滾動容器 */}
           <table border="1" cellPadding="5" cellSpacing="0" className="data-table">
             <thead>
@@ -66,7 +115,7 @@ function App() {
             </tr>
           </thead>
           <tbody>
-            {tableData.map((row, idx) => (
+            {paginatedData.map((row, idx) => (
               <tr key={idx}>
                 {columns.map((column) => (
                   <td key={column}>
@@ -128,6 +177,57 @@ function App() {
     </div>
   );
 
+  // 獲取當前過濾和分頁後的資料
+  const { filteredData, paginatedData } = getFilteredAndPaginatedData(
+    data[activeTab],
+    filterText,
+    currentPage,
+    itemsPerPage
+  );
+
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+
+    const pages = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pages.push(
+        <button
+          key={i}
+          className={`page-button ${currentPage === i ? 'active' : ''}`}
+          onClick={() => handlePageChange(i)}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    return (
+      <div className="pagination-controls">
+        <button
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+        >
+          上一頁
+        </button>
+        {pages}
+        <button
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+        >
+          下一頁
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="app">
       <header>
@@ -162,9 +262,14 @@ function App() {
           className="filter-input"
         />
       </div>
+      
+      <div className="table-info">
+        <h3>{getTableDisplayName(activeTab)} ({filteredData.length} 筆記錄)</h3>
+        {renderPagination()}
+      </div>
 
       <div className="content">
-        {renderTable(getFilteredData(data[activeTab], filterText), activeTab)}
+        {renderTable(paginatedData, activeTab)}
       </div>
 
       <footer>
