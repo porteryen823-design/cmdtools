@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS `CmdTools` (
   `example` varchar(150) DEFAULT NULL,
   `remark1` varchar(150) DEFAULT NULL,
   `remark2` varchar(150) DEFAULT NULL,
-  `Type` varchar(100) DEFAULT NULL,
+  `Classification` varchar(250) DEFAULT NULL,
   PRIMARY KEY (`iSeqNo`)
 ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 ```
@@ -201,7 +201,7 @@ python main.py
 - **example**: 使用範例
 - **remark1**: 備註1
 - **remark2**: 備註2
-- **Type**: 類型分類
+- **Classification**: 類型分類
 
 ### PromptTools 資料表欄位
 - **iSeqNo**: 序號（自動產生）
@@ -237,7 +237,7 @@ python main.py
       "example": "example usage",
       "remark1": "note 1",
       "remark2": "note 2",
-      "Type": "command type"
+      "Classification": "command type"
     }
   ]
 }
@@ -331,4 +331,4 @@ requirements.txt       # 依賴套件清單
 ---
 **版本**: 1.0.0  
 **最後更新**: 2025-11-07
-**開發者**: Roo
+**開發者**: Roo & Porter

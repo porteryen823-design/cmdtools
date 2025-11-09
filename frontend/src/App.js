@@ -99,7 +99,7 @@ function App() {
       'example': '範例',
       'remark1': '備註1',
       'remark2': '備註2',
-      'Type': '類型',
+      'Classification': '類型',
       'Prompt': '提示',
       'Prompt_Eng': '英文提示',
       'Classification': '分類',

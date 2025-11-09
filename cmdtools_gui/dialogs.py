@@ -136,7 +136,7 @@ class EditRecordDialog(QDialog):
                 self.example_input.setText(self.record.get('example', ''))
                 self.remark1_input.setText(self.record.get('remark1', ''))
                 self.remark2_input.setText(self.record.get('remark2', ''))
-                self.type_input.setText(self.record.get('Type', ''))
+                self.type_input.setText(self.record.get('Classification', ''))
             elif self.table_type == 'prompt':
                 self.prompt_input.setText(self.record.get('Prompt', ''))
                 self.prompt_eng_input.setText(self.record.get('Prompt_Eng', ''))
@@ -192,7 +192,7 @@ class EditRecordDialog(QDialog):
                 'example': self.example_input.text().strip(),
                 'remark1': self.remark1_input.text().strip(),
                 'remark2': self.remark2_input.text().strip(),
-                'Type': self.type_input.text().strip()
+                'Classification': self.type_input.text().strip()
             }
         elif self.table_type == 'prompt':
             return {

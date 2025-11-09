@@ -65,7 +65,7 @@ class DatabaseManager:
         try:
             # 載入 CmdTools 資料
             self.cmd_tools_data = self._load_table_data("CmdTools", [
-                "iSeqNo", "cmd", "example", "remark1", "remark2", "Type"
+                "iSeqNo", "cmd", "example", "remark1", "remark2", "Classification"
             ])
             
             # 載入 PromptTools 資料
@@ -123,7 +123,7 @@ class DatabaseManager:
             cursor = self.connection.cursor()
             
             sql = """
-                INSERT INTO CmdTools (cmd, example, remark1, remark2, Type) 
+                INSERT INTO CmdTools (cmd, example, remark1, remark2, Classification)
                 VALUES (%s, %s, %s, %s, %s)
             """
             values = (
@@ -131,7 +131,7 @@ class DatabaseManager:
                 data.get('example', ''),
                 data.get('remark1', ''),
                 data.get('remark2', ''),
-                data.get('Type', '')
+                data.get('Classification', '')
             )
             
             cursor.execute(sql, values)
@@ -147,7 +147,7 @@ class DatabaseManager:
                 'example': data.get('example', ''),
                 'remark1': data.get('remark1', ''),
                 'remark2': data.get('remark2', ''),
-                'Type': data.get('Type', '')
+                'Classification': data.get('Classification', '')
             }
             self.cmd_tools_data.append(new_record)
             
@@ -163,7 +163,7 @@ class DatabaseManager:
             cursor = self.connection.cursor()
             
             sql = """
-                UPDATE CmdTools SET cmd=%s, example=%s, remark1=%s, remark2=%s, Type=%s 
+                UPDATE CmdTools SET cmd=%s, example=%s, remark1=%s, remark2=%s, Classification=%s
                 WHERE iSeqNo=%s
             """
             values = (
@@ -171,7 +171,7 @@ class DatabaseManager:
                 data.get('example', ''),
                 data.get('remark1', ''),
                 data.get('remark2', ''),
-                data.get('Type', ''),
+                data.get('Classification', ''),
                 seq_no
             )
             
@@ -187,7 +187,7 @@ class DatabaseManager:
                         'example': data.get('example', ''),
                         'remark1': data.get('remark1', ''),
                         'remark2': data.get('remark2', ''),
-                        'Type': data.get('Type', '')
+                        'Classification': data.get('Classification', '')
                     })
                     break
             

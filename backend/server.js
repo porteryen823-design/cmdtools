@@ -80,7 +80,7 @@ async function getTableData(tableName, columns) {
 app.get('/api/data', async (req, res) => {
   try {
     const data = {
-      cmd_tools: await getTableData('CmdTools', ['iSeqNo', 'cmd', 'example', 'remark1', 'remark2', 'Type']),
+      cmd_tools: await getTableData('CmdTools', ['iSeqNo', 'cmd', 'example', 'remark1', 'remark2', 'Classification']),
       prompt_tools: await getTableData('PromptTools', ['iSeqNo', 'Prompt', 'Prompt_Eng', 'Classification']),
       win_programs: await getTableData('WinProgram', ['iSeqNo', 'remark1', 'ProgramPathAndName', 'ClickEndRun']),
       websites: await getTableData('WebSite', ['iSeqNo', 'Remark', 'Classification', 'Website', 'account', 'account_webid', 'password', 'password_webid'])
@@ -95,7 +95,7 @@ app.get('/api/data', async (req, res) => {
 // API 路由：取得命令工具資料
 app.get('/api/cmd-tools', async (req, res) => {
   try {
-    const data = await getTableData('CmdTools', ['iSeqNo', 'cmd', 'example', 'remark1', 'remark2', 'Type']);
+    const data = await getTableData('CmdTools', ['iSeqNo', 'cmd', 'example', 'remark1', 'remark2', 'Classification']);
     res.json(data);
   } catch (error) {
     console.error('API /api/cmd-tools 錯誤:', error);

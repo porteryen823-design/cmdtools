@@ -209,7 +209,7 @@ class DataTableWidget(QTableWidget):
                 self.setItem(row, 2, QTableWidgetItem(str(record.get('example', ''))))
                 self.setItem(row, 3, QTableWidgetItem(str(record.get('remark1', ''))))
                 self.setItem(row, 4, QTableWidgetItem(str(record.get('remark2', ''))))
-                self.setItem(row, 5, QTableWidgetItem(str(record.get('Type', ''))))
+                self.setItem(row, 5, QTableWidgetItem(str(record.get('Classification', ''))))
             elif self.table_type == 'prompt':
                 # PromptTools 表格
                 self.setItem(row, 0, QTableWidgetItem(str(record.get('iSeqNo', ''))))
@@ -278,7 +278,7 @@ class DataTableWidget(QTableWidget):
             
             if self.table_type == 'cmd':
                 # CmdTools 全域搜尋：搜尋所有欄位
-                searchable_fields = ['cmd', 'example', 'remark1', 'remark2', 'Type']
+                searchable_fields = ['cmd', 'example', 'remark1', 'remark2', 'Classification']
             elif self.table_type == 'prompt':
                 # PromptTools 全域搜尋：搜尋所有欄位
                 searchable_fields = ['Prompt', 'Prompt_Eng', 'Classification']
@@ -353,7 +353,7 @@ class TableTabWidget(QWidget):
         
         if self.table_type == 'cmd':
             # 命令工具篩選控制項
-            cmd_fields = ['cmd', 'example', 'remark1', 'remark2', 'Type']
+            cmd_fields = ['cmd', 'example', 'remark1', 'remark2', 'Classification']
             self.filter_widget = FilterWidget(fields=cmd_fields)
         elif self.table_type == 'prompt':
             # 提示工具篩選控制項
