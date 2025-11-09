@@ -89,7 +89,6 @@ CREATE TABLE IF NOT EXISTS `CmdTools` (
   `cmd` varchar(150) DEFAULT NULL,
   `example` varchar(150) DEFAULT NULL,
   `remark1` varchar(150) DEFAULT NULL,
-  `remark2` varchar(150) DEFAULT NULL,
   `Classification` varchar(250) DEFAULT NULL,
   PRIMARY KEY (`iSeqNo`)
 ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -200,7 +199,6 @@ python main.py
 - **cmd**: 命令內容
 - **example**: 使用範例
 - **remark1**: 備註1
-- **remark2**: 備註2
 - **Classification**: 類型分類
 
 ### PromptTools 資料表欄位
